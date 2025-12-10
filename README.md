@@ -1,37 +1,57 @@
-# Carbon Emissions Violation Detection
+# Air Quality Violation Detection System
 
-Production ML system for predicting EPA air quality violations 24-48 hours in advance.
+Production ML pipeline for predicting EPA air quality violations 24-48 hours ahead using AWS EMR, Spark MLlib, and Kafka streaming.
 
 ## Quick Start
 ```bash
-make setup    # Install dependencies
-make data     # Download & process EPA data
-make train    # Train models
-make test     # Run validation tests
-make report   # Generate results
+# Setup cluster
+aws emr create-cluster --name "Air-Quality-Prod" --release-label emr-7.5.0 \
+  --applications Name=Spark Name=Hadoop --instance-type m5.xlarge --instance-count 3
+
+# Run pipeline
+make data    # Ingest 42M EPA records
+make train   # Train RF (AUC 0.92) + LR (AUC 0.88)
+make stream  # Start Kafka dashboard
 ```
 
 ## Architecture
-- Data: 42M hourly PM2.5 readings (2020-2024)
-- Features: Lag (24h, 48h), rolling stats (7d), temporal
-- Models: Logistic Regression (realtime), Random Forest (prediction)
-- Storage: HDFS Parquet, partitioned by state
+- **Data**: 42M hourly PM2.5 readings (2020-2024)
+- **Storage**: HDFS Parquet, partitioned by state
+- **Features**: Lag (24h, 48h), rolling stats (7d), temporal
+- **Models**: Random Forest (prediction), Logistic Regression (realtime)
+- **Streaming**: Kafka + Spark Structured Streaming
+- **Dashboard**: Streamlit with live violation alerts
 
 ## Performance
 | Model | AUC | Accuracy | Use Case |
 |-------|-----|----------|----------|
-| LR    | 0.88 | 99.34%  | Realtime classification |
-| RF    | 0.92 | 99.37%  | 24-48hr prediction |
+| RF | 0.9215 | 99.37% | 24-48hr prediction |
+| LR | 0.8804 | 99.34% | Real-time classification |
+
+## Repository Structure
+```
+├── scripts/          # ETL and ML pipeline
+├── tests/            # Data quality tests
+├── docs/             # MODEL_CARD.md
+├── reports/          # Analytics outputs
+└── Makefile          # Automation
+```
+
+## Demo
+Dashboard: `http://<EMR-IP>:8501`
+- Interactive state filtering
+- Live Kafka violation stream
+- Real-time ML predictions
 
 ## Setup
-- AWS EMR 7.12.0 (Spark 3.5.6, Hadoop 3.4.1)
-- 3 nodes: m5.xlarge (12 vCores, 48GB RAM)
-- Cost: ~$3.50 for full pipeline
+```bash
+pip3 install streamlit plotly kafka-python
+export PYTHONPATH=/usr/lib/spark/python:$PYTHONPATH
+streamlit run scripts/08_streamlit_dashboard.py --server.port 8501
+```
 
-## Files
-- `scripts/01_ingest_data.py` - Load raw CSVs to Parquet
-- `scripts/02_clean_and_validate.py` - Type conversion, filtering
-- `scripts/03_feature_engineering.py` - Lag features, labels
-- `scripts/04_train_models.py` - Train LR & RF models
-- `scripts/05_batch_analytics.py` - State/county aggregations
-- `tests/test_data_quality.py` - Data validation suite
+## Data Source
+EPA Air Quality System: https://aqs.epa.gov/aqsweb/airdata/download_files.html
+
+## License
+MIT
