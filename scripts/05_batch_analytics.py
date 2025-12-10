@@ -1,3 +1,9 @@
+"""
+Batch Analytics
+Aggregates violation statistics by state and county.
+Input: hdfs:///user/hadoop/data/features
+Output: hdfs:///user/hadoop/outputs/county_stats
+"""
 import logging
 logging.getLogger("py4j").setLevel(logging.ERROR)
 from pyspark.sql import SparkSession
@@ -15,7 +21,7 @@ df.groupBy("state_name").agg(
     avg(col("violation")).alias("violation_rate")
 ).orderBy(col("violation_rate").desc()).limit(10).show()
 
-# Monthly trend
+# Monthly trend analysis
 print("=== MONTHLY VIOLATION TREND ===")
 df.withColumn("year", year("timestamp_local")) \
   .withColumn("month_num", month("timestamp_local")) \
@@ -24,7 +30,7 @@ df.withColumn("year", year("timestamp_local")) \
       avg("violation").alias("violation_rate")
   ).orderBy("year", "month_num").show(24)
 
-# Save outputs
+# Save county-level aggregations
 df.groupBy("state_name", "county_name").agg(
     count(col("violation")).alias("total"),
     avg(col("pm25")).alias("avg_pm25")

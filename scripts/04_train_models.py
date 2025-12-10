@@ -1,3 +1,9 @@
+"""
+ML Model Training
+Trains Logistic Regression (realtime) and Random Forest (24-48hr prediction).
+Input: hdfs:///user/hadoop/data/features
+Output: Models in hdfs:///user/hadoop/models/
+"""
 import logging
 logging.getLogger("py4j").setLevel(logging.ERROR)
 
@@ -14,17 +20,20 @@ start = time.time()
 
 df = spark.read.parquet("hdfs:///user/hadoop/data/features")
 
+# Time-based split prevents data leakage
 train = df.filter(col("timestamp_local") < "2024-01-01")
 test = df.filter(col("timestamp_local") >= "2024-01-01")
 
 print(f"Train: {train.count():,} | Test: {test.count():,}")
 
+# Assemble feature vector
 feature_cols = ["pm25_lag_24h", "pm25_lag_48h", "pm25_avg_7d", "pm25_std_7d", "hour", "day_of_week", "month"]
 assembler = VectorAssembler(inputCols=feature_cols, outputCol="features")
 
 train_vec = assembler.transform(train).select("features", "violation")
 test_vec = assembler.transform(test).select("features", "violation")
 
+# Model 1: Logistic Regression (fast, realtime classification)
 print("\n=== LOGISTIC REGRESSION ===")
 lr = LogisticRegression(featuresCol="features", labelCol="violation", maxIter=10)
 lr_model = lr.fit(train_vec)
@@ -38,6 +47,7 @@ print(f"Accuracy: {multi_eval.evaluate(lr_pred, {multi_eval.metricName: 'accurac
 
 lr_model.write().overwrite().save("hdfs:///user/hadoop/models/lr_model")
 
+# Model 2: Random Forest (higher accuracy, 24-48hr prediction)
 print("\n=== RANDOM FOREST ===")
 rf = RandomForestClassifier(featuresCol="features", labelCol="violation", numTrees=50, maxDepth=10)
 rf_model = rf.fit(train_vec)
