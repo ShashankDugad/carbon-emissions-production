@@ -1,0 +1,23 @@
+# Carbon Emissions Violation Detection - Results
+
+## Dataset
+- Total rows: 42,168,101
+- Violations: 441,503 (1.05%)
+- Train: 34,265,978 | Test: 7,902,123
+- Time split: <2024 train, >=2024 test
+
+## Model Performance
+### Logistic Regression (Realtime)
+- AUC: 0.8804
+- Accuracy: 99.34%
+- Training time: ~460s
+
+### Random Forest (24-48hr Prediction)
+- AUC: 0.9215
+- Accuracy: 99.37%
+- Training time: ~463s
+
+## Top Violation States
+1. Oregon: 3.82%
+2. California: 3.15%
+3. Montana: 2.47%
